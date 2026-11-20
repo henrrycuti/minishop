@@ -14,6 +14,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -55,6 +56,27 @@ class ProductControllerIT {
                 .andExpect(jsonPath("$.name").value("Webcam Logitech"))
                 .andExpect(jsonPath("$.price").value(250.00))
                 .andExpect(jsonPath("$.stock").value(20));
+    }
+
+    @Test
+    @DisplayName("POST /api/products no permite sobrescribir un producto mediante un ID externo")
+    void shouldIgnoreClientIdAndPreserveExistingProduct() throws Exception {
+        // ARRANGE: el identificador persistente no forma parte del DTO de entrada.
+        Product existing = productRepository.save(Product.builder()
+                .name("Producto original").price(50.0).stock(5).build());
+        String body = "{\"id\":" + existing.getId()
+                + ",\"name\":\"Producto nuevo\",\"price\":75.0,\"stock\":3}";
+
+        // ACT & ASSERT: se crea otro registro y el original permanece intacto.
+        mockMvc.perform(post("/api/products")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(not(existing.getId().intValue())))
+                .andExpect(jsonPath("$.name").value("Producto nuevo"));
+        assertEquals("Producto original",
+                productRepository.findById(existing.getId()).orElseThrow().getName());
+        assertEquals(2L, productRepository.count());
     }
 
     @Test

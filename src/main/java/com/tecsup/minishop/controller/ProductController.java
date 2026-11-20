@@ -19,7 +19,12 @@ public class ProductController {
     }
 
     @PostMapping
-    public ResponseEntity<Product> create(@RequestBody Product product) {
+    public ResponseEntity<Product> create(@RequestBody CreateProductRequest request) {
+        Product product = Product.builder()
+                .name(request.name())
+                .price(request.price())
+                .stock(request.stock())
+                .build();
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(productService.save(product));
     }
